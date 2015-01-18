@@ -8,11 +8,11 @@ import (
 	"compress/zlib"
 	"crypto/sha1"
 	"encoding/hex"
-	"path/filepath"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -44,7 +44,6 @@ type Odb interface {
 	Scan(scanner func(oid *Oid) error) error
 }
 
-
 // An ODB consisting of loose files, e.g., a .git/objects directory.
 // Content errors such as passing a non-directory or broken symlink
 // are detected on creation. After opening, most errors are silently
@@ -58,14 +57,15 @@ type LooseOdb struct {
 }
 
 var _ Odb = LooseOdb{}
+
 func NewLooseOdb(path string) (Odb, error) {
 	// TODO: Add basic validity checks on odb
 	return LooseOdb{root: path}, nil
 }
 
 type looseOdbReader struct {
-	size int64
-	otype ObjectType
+	size   int64
+	otype  ObjectType
 	reader io.Reader
 }
 
@@ -90,27 +90,37 @@ func (odb LooseOdb) Get(oid *Oid) (RawObject, error) {
 	if err == os.ErrNotExist {
 		return nil, MissingObjectError
 	}
-	if err != nil {return nil, IoError}
+	if err != nil {
+		return nil, IoError
+	}
 
 	reader, err := zlib.NewReader(f)
-	if err != nil {return nil, IoError}
+	if err != nil {
+		return nil, IoError
+	}
 
 	breader := bufio.NewReader(reader)
 	header, err := breader.ReadString('\x00')
-	if err != nil {return nil, IoError}
+	if err != nil {
+		return nil, IoError
+	}
 	header = header[:len(header)-1]
 	headerParts := strings.Split(header, " ")
-	if len(headerParts) != 2 {return nil, CorruptDbError}
-	
+	if len(headerParts) != 2 {
+		return nil, CorruptDbError
+	}
+
 	// If the type isn't recognized, this defaults to 0, or TypeUnknown
 	otype := typeMap[headerParts[0]]
 	size, err := strconv.ParseInt(headerParts[1], 10, 64)
-	if err != nil {return nil, CorruptDbError}
-	
+	if err != nil {
+		return nil, CorruptDbError
+	}
+
 	return looseOdbReader{
-		size: size,
+		size:   size,
 		reader: breader,
-		otype: otype,
+		otype:  otype,
 	}, nil
 }
 
@@ -124,20 +134,22 @@ func (odb LooseOdb) Put(obj RawObject) (*Oid, error) {
 			return nil, err
 		}
 		obj = looseOdbReader{
-			size: size,
-			otype: obj.Type(),
+			size:   size,
+			otype:  obj.Type(),
 			reader: buf,
 		}
 	}
 	tmp, err := ioutil.TempFile(odb.root, "tempobj")
-	defer func(){
-		if tmp != nil {os.Remove(tmp.Name())}
+	defer func() {
+		if tmp != nil {
+			os.Remove(tmp.Name())
+		}
 	}()
 
 	zlib_writer := zlib.NewWriter(tmp)
 	hasher := sha1.New()
 	w := io.MultiWriter(hasher, zlib_writer)
-	
+
 	fmt.Fprintf(w, "%s %d\x00", obj.Type(), obj.Length())
 	// we ignore the error here, because hash won't throw errors,
 	// and zlib saves them up
@@ -155,7 +167,7 @@ func (odb LooseOdb) Put(obj RawObject) (*Oid, error) {
 	if err := os.MkdirAll(fmt.Sprintf("%s/%02x", odb.root, hash[0]), 0755); err != nil {
 		return nil, err
 	}
-		
+
 	if err := os.Rename(tmp.Name(), fmt.Sprintf("%s/%02x/%x", odb.root, hash[0], hash[1:])); err != nil {
 		return nil, err
 	}
@@ -165,7 +177,9 @@ func (odb LooseOdb) Put(obj RawObject) (*Oid, error) {
 
 func (odb LooseOdb) Scan(scanner func(oid *Oid) error) error {
 	tldir, err := os.Open(odb.root)
-	if err != nil {return err}
+	if err != nil {
+		return err
+	}
 	defer tldir.Close()
 	if stat, err := tldir.Stat(); err != nil {
 		return err
@@ -179,15 +193,25 @@ func (odb LooseOdb) Scan(scanner func(oid *Oid) error) error {
 		}
 		dName := filepath.Join(odb.root, name)
 		dir, err := os.Open(dName)
-		if err != nil {return nil} // We ignore all sorts of errors
+		if err != nil {
+			return nil
+		} // We ignore all sorts of errors
 		defer dir.Close()
-		if stat, err := dir.Stat(); err != nil || !stat.IsDir() {return nil}
+		if stat, err := dir.Stat(); err != nil || !stat.IsDir() {
+			return nil
+		}
 		fis, err := dir.Readdir(-1)
-		if err != nil {return nil}
+		if err != nil {
+			return nil
+		}
 		for _, fi := range fis {
-			if fi.IsDir() {continue}
+			if fi.IsDir() {
+				continue
+			}
 			//fn := filepath.Join(dName, fi.Name())
-			if len(fi.Name()) != 38 {continue}
+			if len(fi.Name()) != 38 {
+				continue
+			}
 			if n, err := hex.Decode(oid[1:], []byte(fi.Name())); err != nil || n != 19 {
 				continue
 			}
@@ -198,10 +222,16 @@ func (odb LooseOdb) Scan(scanner func(oid *Oid) error) error {
 		return nil
 	}
 	tlfis, err := tldir.Readdir(-1)
-	if err != nil {return nil}
-	for _, tlfi := range tlfis { 
-		if !tlfi.IsDir() {continue}
-		if len(tlfi.Name()) != 2 {continue}
+	if err != nil {
+		return nil
+	}
+	for _, tlfi := range tlfis {
+		if !tlfi.IsDir() {
+			continue
+		}
+		if len(tlfi.Name()) != 2 {
+			continue
+		}
 		if err := procDir(tlfi.Name()); err != nil {
 			return err
 		}
@@ -209,3 +239,49 @@ func (odb LooseOdb) Scan(scanner func(oid *Oid) error) error {
 	return nil
 }
 
+////////////////////////////////////////////////////////////////
+
+type fullObj struct {
+	Type    ObjectType
+	Content []byte
+}
+
+type MemoryODB map[Oid]fullObj
+
+func NewMemoryODB() Odb {
+	return new(MemoryODB)
+}
+
+func (db *MemoryODB) Get(oid *Oid) (RawObject, error) {
+	obj, ok := (*db)[*oid]
+	if !ok {
+		return nil, MissingObjectError
+	}
+	return looseOdbReader{
+		size:   int64(len(obj.Content)),
+		otype:  obj.Type,
+		reader: bytes.NewReader(obj.Content),
+	}, nil
+}
+
+func (db *MemoryODB) Put(obj RawObject) (*Oid, error) {
+	content, err := ioutil.ReadAll(obj)
+	if err != nil {
+		return nil, err
+	}
+	hasher := sha1.New()
+	fmt.Fprintf(hasher, "%s %d\x00", obj.Type(), len(content))
+	var result Oid
+	copy(result[:], hasher.Sum(content))
+	(*db)[result] = fullObj{Type: obj.Type(), Content: content}
+	return &result, nil
+}
+
+func (db *MemoryODB) Scan(scanner func(oid *Oid) error) error {
+	for oid := range *db {
+		if err := scanner(&oid); err != nil {
+			return err
+		}
+	}
+	return nil
+}
