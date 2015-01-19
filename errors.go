@@ -16,4 +16,5 @@ var (
 	IoError            = errors.New("I/O error")
 	CorruptDbError     = errors.New("Corrupt DB")
 	MissingObjectError = errors.New("Missing object")
+	DbNotFoundError    = errors.New("No DB found")
 )

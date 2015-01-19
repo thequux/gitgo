@@ -12,7 +12,7 @@ var cmd_ListObjects = cli.Command{
 	Name: "list_objects",
 	ShortName: "lo",
 	Action: func(context *cli.Context) {
-		odb, err := gitgo.NewLooseOdb("gitgo-testrepo/objects/")
+		odb, err := gitgo.OpenRepository("gitgo-testrepo/")
 		if err != nil {
 			panic(err)
 		}
@@ -28,7 +28,7 @@ var cmd_CatFile = cli.Command{
 	Name: "cat-file",
 	ShortName: "cat",
 	Action: func(context *cli.Context) {
-		odb, err := gitgo.NewLooseOdb("gitgo-testrepo/objects/")
+		odb, err := gitgo.OpenRepository("gitgo-testrepo/")
 		if err != nil {
 			panic(err)
 		}
