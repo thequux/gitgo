@@ -53,6 +53,7 @@ func init() {
 			}
 			cobj, err := repo.ParseObject(obj)
 			if err == gitgo.NotImplementedError {
+				fmt.Println("Not implemented")
 				obj, err = repo.Get(oid)
 				io.Copy(os.Stdout, obj)
 			} else if err != nil {
