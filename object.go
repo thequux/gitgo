@@ -17,6 +17,8 @@ func (repo *Repository) ParseObject(obj RawObject) (GitObject, error) {
 		return repo.ParseRawTree(obj)
 	case TypeBlob:
 		return ParseRawBlob(obj)
+	case TypeCommit:
+		return repo.ParseRawCommit(obj)
 	default:
 		//fmt.Printf("Unimplemented type %s", obj.Type())
 		return nil, NotImplementedError
