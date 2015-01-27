@@ -11,10 +11,11 @@ func (e GitError) Error() string {
 }
 
 var (
-	FormatError        = errors.New("Format error")
-	NilOidError        = errors.New("Nil OID")
-	IoError            = errors.New("I/O error")
-	CorruptDbError     = errors.New("Corrupt DB")
-	MissingObjectError = errors.New("Missing object")
-	DbNotFoundError    = errors.New("No DB found")
+	FormatError         = errors.New("Format error")
+	NilOidError         = errors.New("Nil OID")
+	IoError             = errors.New("I/O error")
+	CorruptDbError      = errors.New("Corrupt DB")
+	MissingObjectError  = errors.New("Missing object")
+	DbNotFoundError     = errors.New("No DB found")
+	NotImplementedError = errors.New("Not implemented")
 )

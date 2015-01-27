@@ -45,10 +45,11 @@ func Discover(path string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-		}
-		path, err = os.Getwd()
-		if err != nil {
-			return "", err
+		} else {
+			path, err = os.Getwd()
+			if err != nil {
+				return "", err
+			}
 		}
 	} else {
 		var err error
